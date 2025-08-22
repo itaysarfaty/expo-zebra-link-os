@@ -200,13 +200,36 @@ export default function App() {
         );
         return;
       }
-      const { readyToPrint, paperOut, headOpen, paused } = result.data;
+      const {
+        isHeadCold,
+        isHeadOpen,
+        isHeadTooHot,
+        isPaperOut,
+        isPartialFormatInProgress,
+        isPaused,
+        isReadyToPrint,
+        isReceiveBufferFull,
+        isRibbonOut,
+        labelLengthInDots,
+        labelsRemainingInBatch,
+        numberOfFormatsInReceiveBuffer,
+        printMode,
+      } = result.data;
       Alert.alert(
         "Printer status",
-        `Ready: ${readyToPrint ? "Yes" : "No"}\n` +
-          `Paper out: ${paperOut ? "Yes" : "No"}\n` +
-          `Head open: ${headOpen ? "Yes" : "No"}\n` +
-          `Paused: ${paused ? "Yes" : "No"}`
+        `Ready: ${isReadyToPrint ? "Yes" : "No"}\n` +
+          `Paused: ${isPaused ? "Yes" : "No"}\n` +
+          `Paper out: ${isPaperOut ? "Yes" : "No"}\n` +
+          `Head open: ${isHeadOpen ? "Yes" : "No"}\n` +
+          `Head cold: ${isHeadCold ? "Yes" : "No"}\n` +
+          `Head too hot: ${isHeadTooHot ? "Yes" : "No"}\n` +
+          `Ribbon out: ${isRibbonOut ? "Yes" : "No"}\n` +
+          `Receive buffer full: ${isReceiveBufferFull ? "Yes" : "No"}\n` +
+          `Partial format in progress: ${isPartialFormatInProgress ? "Yes" : "No"}\n` +
+          `Labels remaining in batch: ${labelsRemainingInBatch}\n` +
+          `Number of formats in buffer: ${numberOfFormatsInReceiveBuffer}\n` +
+          `Label length (dots): ${labelLengthInDots}\n` +
+          `Print mode: ${printMode}`
       );
     } catch (e) {
       Alert.alert("Status error", String(e));

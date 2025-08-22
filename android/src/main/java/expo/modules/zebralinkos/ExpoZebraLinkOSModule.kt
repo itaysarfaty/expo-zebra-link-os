@@ -102,7 +102,10 @@ private class BluetoothConnectionPool {
                 last = e
                 safeClose(connection)
                 if (attempt < connectionOpenRetries - 1) {
-                    try { Thread.sleep(connectionOpenRetryDelayMs) } catch (_: InterruptedException) {}
+                    try {
+                        Thread.sleep(connectionOpenRetryDelayMs)
+                    } catch (_: InterruptedException) {
+                    }
                 }
             }
         }
@@ -135,7 +138,8 @@ private class BluetoothConnectionPool {
     private fun safeClose(connection: Connection?) {
         try {
             connection?.close()
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 }
 
@@ -151,7 +155,7 @@ class ExpoZebraLinkOSModule : Module() {
         private const val ERROR_DISCOVERY_ALREADY_FINISHED = "DISCOVERY_ALREADY_FINISHED"
         private const val ERROR_DISCOVERY_ERROR = "DISCOVERY_ERROR"
         private const val ERROR_CONNECTION_EXCEPTION = "CONNECTION_EXCEPTION"
-        
+
         private const val ERROR_PRINT_ERROR = "PRINT_ERROR"
         private const val ERROR_PAIRING_FAILED = "PAIRING_FAILED"
         private const val ERROR_UNPAIRING_FAILED = "UNPAIRING_FAILED"
@@ -385,7 +389,8 @@ class ExpoZebraLinkOSModule : Module() {
         AsyncFunction("getPairedBluetoothDevices") { promise: Promise ->
             val reactContext = validateContextAndBluetooth(promise) ?: return@AsyncFunction
             executeWithPermissions(reactContext, promise) {
-                val bluetoothManager = reactContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+                val bluetoothManager =
+                    reactContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
                 val adapter = bluetoothManager.adapter
                 val result = mutableListOf<Map<String, Any>>()
 
@@ -441,7 +446,21 @@ class ExpoZebraLinkOSModule : Module() {
                     }
                     val printer: ZebraPrinter = ZebraPrinterFactory.getInstance(connection)
                     val status: PrinterStatus = printer.currentStatus
-                     status
+                    mapOf(
+                        "isHeadCold" to status.isHeadCold,
+                        "isHeadOpen" to status.isHeadOpen,
+                        "isHeadTooHot" to status.isHeadTooHot,
+                        "isPaperOut" to status.isPaperOut,
+                        "isPartialFormatInProgress" to status.isPartialFormatInProgress,
+                        "isPaused" to status.isPaused,
+                        "isReadyToPrint" to status.isReadyToPrint,
+                        "isReceiveBufferFull" to status.isReceiveBufferFull,
+                        "isRibbonOut" to status.isRibbonOut,
+                        "labelLengthInDots" to status.labelLengthInDots,
+                        "labelsRemainingInBatch" to status.labelsRemainingInBatch,
+                        "numberOfFormatsInReceiveBuffer" to status.numberOfFormatsInReceiveBuffer,
+                        "printMode" to status.printMode.toString()
+                    )
                 }
                 promise.resolve(successResponse(data))
             } catch (e: Exception) {
@@ -450,10 +469,12 @@ class ExpoZebraLinkOSModule : Module() {
                         ERROR_CONNECTION_EXCEPTION,
                         e.message ?: "Connection exception while getting status"
                     )
+
                     is SecurityException -> errorResponse(
                         ERROR_BLUETOOTH_PERMISSION_DENIED,
                         MSG_BLUETOOTH_PERMISSION_REQUIRED
                     )
+
                     else -> errorResponse(
                         ERROR_STATUS_ERROR,
                         e.message ?: "Unknown error while getting status"
@@ -464,7 +485,11 @@ class ExpoZebraLinkOSModule : Module() {
         }.start()
     }
 
-    private fun performDiscovery(reactContext: Context, discoveryTimeoutMs: Long, promise: Promise) {
+    private fun performDiscovery(
+        reactContext: Context,
+        discoveryTimeoutMs: Long,
+        promise: Promise
+    ) {
         val foundPrinters = mutableListOf<Map<String, Any>>()
         var finished = false
         val pairedAddresses = getPairedDeviceAddresses(reactContext)
@@ -546,7 +571,10 @@ class ExpoZebraLinkOSModule : Module() {
         }
     }
 
-    private fun createPrinterInfo(printer: DiscoveredPrinter, pairedAddresses: Set<String>): Map<String, Any> {
+    private fun createPrinterInfo(
+        printer: DiscoveredPrinter,
+        pairedAddresses: Set<String>
+    ): Map<String, Any> {
         val info = mutableMapOf<String, Any>()
         info["address"] = printer.address
         (printer as? DiscoveredPrinterBluetooth)?.friendlyName?.let { name ->
@@ -639,7 +667,8 @@ class ExpoZebraLinkOSModule : Module() {
     }
 
     private fun getPairedDeviceAddresses(context: Context): Set<String> {
-        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager =
+            context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = bluetoothManager.adapter
         return try {
             val devices = adapter?.bondedDevices ?: emptySet()
@@ -650,7 +679,8 @@ class ExpoZebraLinkOSModule : Module() {
     }
 
     private fun performPair(macAddress: String, context: Context, promise: Promise) {
-        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager =
+            context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = bluetoothManager.adapter
         val device = try {
             adapter.getRemoteDevice(macAddress)
@@ -665,7 +695,12 @@ class ExpoZebraLinkOSModule : Module() {
                 return
             }
         } catch (_: SecurityException) {
-            promise.resolve(errorResponse(ERROR_BLUETOOTH_PERMISSION_DENIED, MSG_BLUETOOTH_PERMISSION_REQUIRED))
+            promise.resolve(
+                errorResponse(
+                    ERROR_BLUETOOTH_PERMISSION_DENIED,
+                    MSG_BLUETOOTH_PERMISSION_REQUIRED
+                )
+            )
             return
         }
 
@@ -675,30 +710,38 @@ class ExpoZebraLinkOSModule : Module() {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (intent?.action != BluetoothDevice.ACTION_BOND_STATE_CHANGED) return
-                val dev: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-                } else {
-                    @Suppress("DEPRECATION") intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                }
+                val dev: BluetoothDevice? =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(
+                            BluetoothDevice.EXTRA_DEVICE,
+                            BluetoothDevice::class.java
+                        )
+                    } else {
+                        @Suppress("DEPRECATION") intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    }
                 if (dev?.address?.equals(device.address, ignoreCase = true) != true) return
 
-                val bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
+                val bondState =
+                    intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
                 if (finished) return
                 when (bondState) {
                     BluetoothDevice.BOND_BONDED -> {
                         finished = true
                         try {
                             context.unregisterReceiver(this)
-                        } catch (_: IllegalArgumentException) {}
+                        } catch (_: IllegalArgumentException) {
+                        }
                         handler.removeCallbacksAndMessages(null)
                         promise.resolve(successResponse())
                     }
+
                     BluetoothDevice.BOND_NONE -> {
                         // Pairing failed or was canceled
                         finished = true
                         try {
                             context.unregisterReceiver(this)
-                        } catch (_: IllegalArgumentException) {}
+                        } catch (_: IllegalArgumentException) {
+                        }
                         handler.removeCallbacksAndMessages(null)
                         promise.resolve(errorResponse(ERROR_PAIRING_FAILED, MSG_PAIRING_FAILED))
                     }
@@ -713,7 +756,8 @@ class ExpoZebraLinkOSModule : Module() {
             finished = true
             try {
                 context.unregisterReceiver(receiver)
-            } catch (_: IllegalArgumentException) {}
+            } catch (_: IllegalArgumentException) {
+            }
             promise.resolve(errorResponse(ERROR_OPERATION_TIMEOUT, MSG_OPERATION_TIMEOUT))
         }
         handler.postDelayed(timeout, PAIRING_TIMEOUT_MS)
@@ -723,7 +767,10 @@ class ExpoZebraLinkOSModule : Module() {
             if (!started) {
                 if (!finished) {
                     finished = true
-                    try { context.unregisterReceiver(receiver) } catch (_: IllegalArgumentException) {}
+                    try {
+                        context.unregisterReceiver(receiver)
+                    } catch (_: IllegalArgumentException) {
+                    }
                     handler.removeCallbacksAndMessages(null)
                     promise.resolve(errorResponse(ERROR_PAIRING_FAILED, MSG_PAIRING_FAILED))
                 }
@@ -731,15 +778,24 @@ class ExpoZebraLinkOSModule : Module() {
         } catch (e: SecurityException) {
             if (!finished) {
                 finished = true
-                try { context.unregisterReceiver(receiver) } catch (_: IllegalArgumentException) {}
+                try {
+                    context.unregisterReceiver(receiver)
+                } catch (_: IllegalArgumentException) {
+                }
                 handler.removeCallbacksAndMessages(null)
-                promise.resolve(errorResponse(ERROR_BLUETOOTH_PERMISSION_DENIED, MSG_BLUETOOTH_PERMISSION_REQUIRED))
+                promise.resolve(
+                    errorResponse(
+                        ERROR_BLUETOOTH_PERMISSION_DENIED,
+                        MSG_BLUETOOTH_PERMISSION_REQUIRED
+                    )
+                )
             }
         }
     }
 
     private fun performUnpair(macAddress: String, context: Context, promise: Promise) {
-        val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothManager =
+            context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         val adapter = bluetoothManager.adapter
         val device = try {
             adapter.getRemoteDevice(macAddress)
@@ -754,7 +810,12 @@ class ExpoZebraLinkOSModule : Module() {
                 return
             }
         } catch (_: SecurityException) {
-            promise.resolve(errorResponse(ERROR_BLUETOOTH_PERMISSION_DENIED, MSG_BLUETOOTH_PERMISSION_REQUIRED))
+            promise.resolve(
+                errorResponse(
+                    ERROR_BLUETOOTH_PERMISSION_DENIED,
+                    MSG_BLUETOOTH_PERMISSION_REQUIRED
+                )
+            )
             return
         }
 
@@ -764,22 +825,31 @@ class ExpoZebraLinkOSModule : Module() {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (intent?.action != BluetoothDevice.ACTION_BOND_STATE_CHANGED) return
-                val dev: BluetoothDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-                } else {
-                    @Suppress("DEPRECATION") intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                }
+                val dev: BluetoothDevice? =
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(
+                            BluetoothDevice.EXTRA_DEVICE,
+                            BluetoothDevice::class.java
+                        )
+                    } else {
+                        @Suppress("DEPRECATION") intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    }
                 if (dev?.address?.equals(device.address, ignoreCase = true) != true) return
 
-                val bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
+                val bondState =
+                    intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
                 if (finished) return
                 when (bondState) {
                     BluetoothDevice.BOND_NONE -> {
                         finished = true
-                        try { context.unregisterReceiver(this) } catch (_: IllegalArgumentException) {}
+                        try {
+                            context.unregisterReceiver(this)
+                        } catch (_: IllegalArgumentException) {
+                        }
                         handler.removeCallbacksAndMessages(null)
                         promise.resolve(successResponse())
                     }
+
                     BluetoothDevice.BOND_BONDED -> {
                         // Still bonded after an unpair attempt => failure case
                         // Ignore here; we'll rely on timeout if nothing changes
@@ -793,7 +863,10 @@ class ExpoZebraLinkOSModule : Module() {
         val timeout = Runnable {
             if (finished) return@Runnable
             finished = true
-            try { context.unregisterReceiver(receiver) } catch (_: IllegalArgumentException) {}
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (_: IllegalArgumentException) {
+            }
             promise.resolve(errorResponse(ERROR_OPERATION_TIMEOUT, MSG_OPERATION_TIMEOUT))
         }
         handler.postDelayed(timeout, PAIRING_TIMEOUT_MS)
@@ -805,7 +878,10 @@ class ExpoZebraLinkOSModule : Module() {
                 // If immediate failure, clean up and fail. A broadcast may still arrive but we guard with 'finished'.
                 if (!finished) {
                     finished = true
-                    try { context.unregisterReceiver(receiver) } catch (_: IllegalArgumentException) {}
+                    try {
+                        context.unregisterReceiver(receiver)
+                    } catch (_: IllegalArgumentException) {
+                    }
                     handler.removeCallbacksAndMessages(null)
                     promise.resolve(errorResponse(ERROR_UNPAIRING_FAILED, MSG_UNPAIRING_FAILED))
                 }
@@ -813,10 +889,16 @@ class ExpoZebraLinkOSModule : Module() {
         } catch (e: Exception) {
             if (!finished) {
                 finished = true
-                try { context.unregisterReceiver(receiver) } catch (_: IllegalArgumentException) {}
+                try {
+                    context.unregisterReceiver(receiver)
+                } catch (_: IllegalArgumentException) {
+                }
                 handler.removeCallbacksAndMessages(null)
                 val response = if (e is SecurityException) {
-                    errorResponse(ERROR_BLUETOOTH_PERMISSION_DENIED, MSG_BLUETOOTH_PERMISSION_REQUIRED)
+                    errorResponse(
+                        ERROR_BLUETOOTH_PERMISSION_DENIED,
+                        MSG_BLUETOOTH_PERMISSION_REQUIRED
+                    )
                 } else {
                     errorResponse(ERROR_UNPAIRING_FAILED, MSG_UNPAIRING_FAILED)
                 }
