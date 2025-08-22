@@ -1,0 +1,9 @@
+{
+  "platforms": ["android"],
+  "apple": {
+    "modules": ["ExpoZebraLinkOSModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.zebralinkos.ExpoZebraLinkOSModule"]
+  }
+}
