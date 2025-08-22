@@ -1,6 +1,6 @@
 {
   "name": "expo-zebra-link-os",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "An interface between zebras link os sdk and your expo application",
   "main": "build/index.js",
   "types": "build/index.d.ts",
